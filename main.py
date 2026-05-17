@@ -28,4 +28,6 @@ if __name__ == "__main__":
 
 #conflict
 
-#for commit 3
+#conflict
+
+#for commit 1
