@@ -26,4 +26,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-#for commit 3
+#conflict
+
+#for commit 1
