@@ -4,7 +4,7 @@ def run_smoke_test():
     print("Starting Post-Deployment Verification (Smoke Tests)...")
     
     expected_status = 1
-    actual_status = 0  # Змінюємо з 1 на 0, щоб зламати перевірку
+    actual_status = 1  # Повертаємо 1, тепер тести знову проходять
     
     print(f"Checking system core status: Expected {expected_status}, Got {actual_status}")
     
