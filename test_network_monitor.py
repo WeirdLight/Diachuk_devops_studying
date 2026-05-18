@@ -31,9 +31,9 @@ class TestNetworkMonitor(unittest.TestCase):
     # --- ТЕСТИ ДЛЯ СЕРВІСУ ПІНГУ (ping_service.py) ---
 
     @patch("ping_service.os.system")
-    def test_ping_host_success(self, mock_system):
-        """Тест успішного пінгу (хост доступний)"""
-        mock_system.return_value = 0
+    def test_ping_status(self):
+        # Тест гарантовано впаде, бо функція поверне "Accessible", а ми чекаємо "Broken"
+        self.assertEqual(get_ping_status("127.0.0.1"), "Broken")
         
         result = ping_host("8.8.8.8")
         
