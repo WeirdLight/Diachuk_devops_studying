@@ -7,7 +7,9 @@ on:
     branches: [ main ]
 
 jobs:
-  # Етап 1: Тестування
+  # ========================================================
+  # ЕТАП 1: МОДУЛЬНЕ ТЕСТУВАННЯ (Unit Tests)
+  # ========================================================
   test:
     runs-on: ubuntu-latest
     steps:
@@ -22,42 +24,116 @@ jobs:
       - name: Run Unit Tests
         run: python -m unittest test_network_monitor.py
 
-  # Етап 2: Збирання проєкту (build)
+  # ========================================================
+  # ЕТАП 2: ЗБИРАННЯ ПРОЄКТУ ТА СТВОРЕННЯ АРТЕФАКТУ (Build)
+  # ========================================================
   build:
     runs-on: ubuntu-latest
-    needs: test # Запуститься тільки після успішного тест-паку
+    needs: test # Не запуститься, якщо тести впали
     steps:
-      - name: Simulated Build Step
-        run: |
-          echo "Compiling and packaging the application..."
-          echo "Artifacts created successfully."
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # Етап 3: Розгортання на тестове середовище (deploy_staging)
+      # Створюємо реальний текстовий файл, який імітує збірку програми
+      - name: Create Build Artifact
+        run: |
+          mkdir -p dist
+          echo "=== NETWORK MONITOR BUILD ARTIFACT ===" > dist/app_release.txt
+          echo "Build ID: ${{ github.run_id }}" >> dist/app_release.txt
+          echo "Commit SHA: ${{ github.sha }}" >> dist/app_release.txt
+          echo "Status: Production Ready" >> dist/app_release.txt
+          echo "Included modules: main.py, ping_service.py, validators.py" >> dist/app_release.txt
+
+      # Завантажуємо створений файл у сховище GitHub
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-monitor-artifact
+          path: dist/app_release.txt
+          retention-days: 5
+
+  # ========================================================
+  # ЕТАП 3: РОЗГОРТАННЯ НА ТЕСТОВЕ СЕРЕДОВИЩЕ (Deploy Staging)
+  # ========================================================
   deploy_staging:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build # Залежить від успішного збирання артефакту
     steps:
-      - name: Simulated Deploy to Staging
-        run: |
-          echo "Deploying application to Staging server..."
-          echo "Application is live on staging.local"
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # Етап 4: Верифікація та smoke-тести на staging (verify_staging)
+      # Скачуємо артефакт, створений на кроці build
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: network-monitor-artifact
+          path: staging_dist
+
+      # Імітуємо деплой та зчитуємо вміст отриманого артефакту
+      - name: Simulate Deploy and Read Artifact
+        run: |
+          echo "Starting deployment to STAGING environment..."
+          echo "Extracting release packages..."
+          if [ -f staging_dist/app_release.txt ]; then
+            echo "Artifact found! Deploying configuration:"
+            echo "--------------------------------------------------------"
+            cat staging_dist/app_release.txt
+            echo "--------------------------------------------------------"
+            echo "Deployment to Staging successful."
+          else
+            echo "Error: Artifact missing!"
+            exit 1
+          fi
+
+  # ========================================================
+  # ЕТАП 4: ПОСТ-ДЕПЛОЙНА ВЕРИФІКАЦІЯ (Smoke Test)
+  # ========================================================
   verify_staging:
     runs-on: ubuntu-latest
-    needs: deploy_staging
+    needs: deploy_staging # Запуститься тільки після деплою на стейджинг
     steps:
-      - name: Simulated Verification
-        run: |
-          echo "Running Integration and Smoke tests against Staging..."
-          echo "Health check: HTTP 200 OK. Staging is stable."
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # Етап 5: Фінальне розгортання на продакшн (deploy_production)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Автоматично запускаємо наш скрипт смоук-тесту
+      - name: Run Smoke Tests
+        run: python smoke_test.py
+
+# Етап 5: Фінальне розгортання на продакшн (deploy_production)
   deploy_production:
     runs-on: ubuntu-latest
-    needs: verify_staging
+    needs: verify_staging # Запуститься тільки якщо smoke-тести на staging пройшли успішно
+    environment: production # АКТИВАЦІЯ РУЧНОГО ПІДТВЕРДЖЕННЯ (Manual Approval)
+    
     steps:
-      - name: Simulated Deploy to Production
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Скачуємо той самий артефакт, що був зібраний на етапі build
+      - name: Download Build Artifact for Production
+        uses: actions/download-artifact@v4
+        with:
+          name: network-monitor-artifact
+          path: prod_dist
+
+      # Імітуємо фінальний деплой: зчитуємо вміст перевіреного артефакту
+      - name: Simulate Production Deploy and Read Artifact
         run: |
-          echo "Deploying application to Production server..."
-          echo "Deployment successful! Version is live for users."
+          echo "Manual approval received! Starting deployment to PRODUCTION..."
+          echo "Deploying verified release package to live servers..."
+          
+          if [ -f prod_dist/app_release.txt ]; then
+            echo "Production Artifact verified. Outputting build metadata:"
+            echo "--------------------------------------------------------"
+            cat prod_dist/app_release.txt
+            echo "--------------------------------------------------------"
+            echo "SUCCESS: Version ${{ github.sha }} is now live for end users!"
+          else
+            echo "Critical Error: Production Artifact missing!"
+            exit 1
+          fi
